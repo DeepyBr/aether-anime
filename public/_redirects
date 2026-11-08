@@ -1,0 +1,3 @@
+# Netlify Redirects & Proxies
+/api/graphql  https://api.otakulogia.com/graphql  200!
+/*            /index.html                         200

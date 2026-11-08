@@ -1,0 +1,139 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cyber-bg: #070611;
+  --color-cyber-card: #0f0c22;
+  --color-cyber-card-hover: #171333;
+  --color-cyber-border: rgba(0, 240, 255, 0.2);
+  --color-cyber-border-pink: rgba(255, 0, 127, 0.3);
+  --color-cyber-cyan: #00f0ff;
+  --color-cyber-cyan-glow: rgba(0, 240, 255, 0.5);
+  --color-cyber-pink: #ff007f;
+  --color-cyber-pink-glow: rgba(255, 0, 127, 0.5);
+  --color-cyber-purple: #9d4edd;
+  --color-cyber-dark-purple: #150f2f;
+  --shadow-neon-cyan: 0 0 15px rgba(0, 240, 255, 0.4), inset 0 0 15px rgba(0, 240, 255, 0.1);
+  --shadow-neon-pink: 0 0 15px rgba(255, 0, 127, 0.4), inset 0 0 15px rgba(255, 0, 127, 0.1);
+  --shadow-neon-dual: 0 0 20px rgba(0, 240, 255, 0.4), 0 0 35px rgba(255, 0, 127, 0.3);
+  --shadow-card-glow: 0 8px 32px 0 rgba(0, 0, 0, 0.6), 0 0 1px 1px rgba(0, 240, 255, 0.2);
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  background-color: #070611;
+  background-image: 
+    radial-gradient(circle at 15% 15%, rgba(0, 240, 255, 0.08) 0%, transparent 40%),
+    radial-gradient(circle at 85% 25%, rgba(255, 0, 127, 0.08) 0%, transparent 45%),
+    radial-gradient(circle at 50% 80%, rgba(157, 78, 221, 0.07) 0%, transparent 50%);
+  background-attachment: fixed;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, .font-display {
+  font-family: 'Orbitron', 'Plus Jakarta Sans', sans-serif;
+}
+
+/* Touch momentum scroll */
+.touch-scroll {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.touch-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Custom Cyber Neon Scrollbar for Desktop */
+@media (min-width: 768px) {
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #090717;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #00f0ff 0%, #ff007f 100%);
+    border-radius: 9999px;
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #38bdf8 0%, #f43f5e 100%);
+  }
+}
+
+/* Glowing Neon utility classes */
+.neon-border-box {
+  position: relative;
+  border-radius: 1.25rem;
+  background: rgba(15, 12, 34, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.12), inset 0 0 15px rgba(255, 0, 127, 0.08);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.neon-border-box:hover {
+  border-color: rgba(0, 240, 255, 0.5);
+  box-shadow: 0 0 25px rgba(0, 240, 255, 0.25), 0 0 35px rgba(255, 0, 127, 0.15);
+}
+
+.neon-border-pink {
+  border: 1px solid rgba(255, 0, 127, 0.4);
+  box-shadow: 0 0 20px rgba(255, 0, 127, 0.25), inset 0 0 12px rgba(255, 0, 127, 0.1);
+}
+
+.neon-text-cyan {
+  color: #00f0ff;
+  text-shadow: 0 0 12px rgba(0, 240, 255, 0.7), 0 0 25px rgba(0, 240, 255, 0.4);
+}
+
+.neon-text-pink {
+  color: #ff007f;
+  text-shadow: 0 0 12px rgba(255, 0, 127, 0.7), 0 0 25px rgba(255, 0, 127, 0.4);
+}
+
+.neon-badge {
+  background: rgba(0, 240, 255, 0.12);
+  border: 1px solid rgba(0, 240, 255, 0.4);
+  color: #00f0ff;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+}
+
+.neon-badge-pink {
+  background: rgba(255, 0, 127, 0.12);
+  border: 1px solid rgba(255, 0, 127, 0.4);
+  color: #ff007f;
+  box-shadow: 0 0 10px rgba(255, 0, 127, 0.3);
+}
+
+.btn-neon-gradient {
+  background: linear-gradient(135deg, #00f0ff 0%, #ff007f 100%);
+  color: #ffffff;
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.4), 0 0 30px rgba(255, 0, 127, 0.3);
+  transition: all 0.25s ease;
+}
+
+.btn-neon-gradient:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 30px rgba(0, 240, 255, 0.7), 0 0 45px rgba(255, 0, 127, 0.5);
+}
+
+.glass-panel {
+  background: rgba(14, 11, 31, 0.9);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 240, 255, 0.18);
+}
+
+/* Mobile bottom nav safe padding */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 12px);
+}
