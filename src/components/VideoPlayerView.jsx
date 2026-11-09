@@ -70,11 +70,39 @@ export default function VideoPlayerView({
     setShowControls(true);
     if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
     controlsTimeoutRef.current = setTimeout(() => {
-      if (isPlaying) {
+      if (videoRef.current && !videoRef.current.paused) {
         setShowControls(false);
       }
     }, 3500);
   };
+
+  const handlePlayEvent = () => {
+    setIsPlaying(true);
+    handleUserActivity();
+  };
+
+  const handlePauseEvent = () => {
+    setIsPlaying(false);
+    setShowControls(true);
+    if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+  };
+
+  // Sync state and attempt autoplay safely on stream change
+  useEffect(() => {
+    setIsPlaying(false);
+    setShowControls(true);
+    if (videoRef.current) {
+      const p = videoRef.current.play();
+      if (p !== undefined) {
+        p.then(() => {
+          setIsPlaying(true);
+          handleUserActivity();
+        }).catch(() => {
+          setIsPlaying(false);
+        });
+      }
+    }
+  }, [streamUrl]);
 
   // Video Time & Progress Update
   const handleTimeUpdate = () => {
@@ -92,6 +120,7 @@ export default function VideoPlayerView({
   // Video ended: auto next
   const handleEnded = () => {
     setIsPlaying(false);
+    setShowControls(true);
     if (anime && episode) {
       saveWatchProgress(anime, episode, duration, duration);
     }
@@ -104,10 +133,14 @@ export default function VideoPlayerView({
   const togglePlay = () => {
     if (!videoRef.current) return;
     if (videoRef.current.paused) {
-      videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+      videoRef.current.play().then(() => {
+        setIsPlaying(true);
+        handleUserActivity();
+      }).catch(() => {});
     } else {
       videoRef.current.pause();
       setIsPlaying(false);
+      setShowControls(true);
     }
   };
 
@@ -288,19 +321,29 @@ export default function VideoPlayerView({
         {/* Video Player Column */}
         <div className="lg:col-span-2 flex flex-col space-y-3 sm:space-y-4">
           
-          {/* Video Player Frame - Sticky on mobile portrait */}
+          {/* Video Player Frame - Sticky on mobile portrait, relative positioned container */}
           <div
             ref={containerRef}
             onMouseMove={handleUserActivity}
+            onMouseLeave={() => {
+              if (videoRef.current && !videoRef.current.paused) {
+                setShowControls(false);
+              }
+            }}
             onTouchStart={handleTouchContainer}
-            className="relative aspect-video w-full rounded-xl sm:rounded-2xl overflow-hidden bg-black border sm:border-2 border-cyber-cyan/50 shadow-neon-dual flex items-center justify-center group select-none sticky top-0 sm:static z-30"
+            className="relative sticky top-0 sm:relative aspect-video w-full rounded-xl sm:rounded-2xl overflow-hidden bg-black border sm:border-2 border-cyber-cyan/50 shadow-neon-dual flex items-center justify-center group select-none z-30"
           >
             <video
               ref={videoRef}
               src={streamUrl}
               onTimeUpdate={handleTimeUpdate}
               onEnded={handleEnded}
-              onClick={togglePlay}
+              onPlay={handlePlayEvent}
+              onPause={handlePauseEvent}
+              onClick={() => {
+                handleUserActivity();
+                togglePlay();
+              }}
               playsInline
               webkit-playsinline="true"
               autoPlay
@@ -310,8 +353,12 @@ export default function VideoPlayerView({
             {/* Big Center Play Indicator on Pause */}
             {!isPlaying && (
               <button
-                onClick={togglePlay}
-                className="absolute w-14 h-14 sm:w-20 sm:h-20 rounded-full bg-cyber-cyan/20 border-2 border-cyber-cyan flex items-center justify-center text-white shadow-neon-cyan hover:scale-110 transition cursor-pointer backdrop-blur-md"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  togglePlay();
+                }}
+                className="absolute w-14 h-14 sm:w-20 sm:h-20 rounded-full bg-cyber-cyan/20 border-2 border-cyber-cyan flex items-center justify-center text-white shadow-neon-cyan hover:scale-110 transition cursor-pointer backdrop-blur-md z-20"
+                title="Reproduzir"
               >
                 <Play className="w-7 h-7 sm:w-10 sm:h-10 text-cyber-cyan fill-current ml-0.5 sm:ml-1" />
               </button>
@@ -319,7 +366,7 @@ export default function VideoPlayerView({
 
             {/* Custom Cyber Neon Controls Overlay */}
             <div
-              className={`absolute inset-x-0 bottom-0 p-2 sm:p-4 bg-gradient-to-t from-black/95 via-black/70 to-transparent transition-opacity duration-300 flex flex-col gap-1.5 sm:gap-2 ${
+              className={`absolute inset-x-0 bottom-0 p-2 sm:p-4 bg-gradient-to-t from-black/95 via-black/70 to-transparent transition-opacity duration-300 flex flex-col gap-1.5 sm:gap-2 z-20 ${
                 showControls ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
               }`}
             >

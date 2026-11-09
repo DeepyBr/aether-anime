@@ -182,3 +182,17 @@ h1, h2, h3, .font-display {
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom, 12px);
 }
+
+/* Fullscreen Video Player styling */
+:fullscreen, ::backdrop {
+  background-color: #000000 !important;
+}
+
+div:fullscreen {
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+  border-radius: 0 !important;
+  border: none !important;
+}
