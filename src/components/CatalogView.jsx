@@ -181,7 +181,7 @@ export default function CatalogView({
             <span className="text-cyber-pink">Ativo: {selectedLetter}</span>
           )}
         </div>
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-2 sm:pb-3 responsive-scroll-x">
           {LETTERS.map(letter => {
             const active = selectedLetter === letter;
             return (
@@ -206,7 +206,7 @@ export default function CatalogView({
         <span className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wider block px-1">
           Gêneros & Categorias:
         </span>
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-3 responsive-scroll-x">
           {categoriesList.map(cat => {
             const active = selectedCategory === cat.slug;
             return (

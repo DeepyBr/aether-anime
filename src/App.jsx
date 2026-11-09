@@ -192,7 +192,7 @@ export default function App() {
 
             {/* Quick Genre Quick-Links Bar */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 sm:-mt-8 relative z-20">
-              <div className="flex items-center gap-3 overflow-x-auto p-3.5 rounded-2xl glass-panel border border-cyber-border shadow-neon-cyan scrollbar-none">
+              <div className="flex items-center gap-3 overflow-x-auto p-3.5 pb-3 sm:pb-4 rounded-2xl glass-panel border border-cyber-border shadow-neon-cyan responsive-scroll-x">
                 <span className="text-xs font-mono font-bold text-cyber-cyan uppercase tracking-wider shrink-0 flex items-center gap-1.5 pl-2">
                   <Compass className="w-3.5 h-3.5" /> Gêneros:
                 </span>

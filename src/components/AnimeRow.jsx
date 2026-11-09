@@ -80,8 +80,7 @@ export default function AnimeRow({
       {/* Horizontal Scrollable Carousel */}
       <div
         ref={rowRef}
-        className="flex items-stretch gap-4 sm:gap-5 overflow-x-auto scrollbar-none scroll-smooth pb-3 -mx-4 px-4 sm:mx-0 sm:px-0"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        className="flex items-stretch gap-4 sm:gap-5 overflow-x-auto responsive-scroll-x scroll-smooth pb-3 sm:pb-4 -mx-4 px-4 sm:mx-0 sm:px-0"
       >
         {animes.map((anime) => (
           <div

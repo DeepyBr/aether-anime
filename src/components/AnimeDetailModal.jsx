@@ -218,7 +218,7 @@ export default function AnimeDetailModal({
                   <Layers className="w-3.5 h-3.5" />
                   Temporadas ({seasons.length})
                 </div>
-                <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+                <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-3 responsive-scroll-x">
                   {seasons.map((season, idx) => (
                     <button
                       key={season.id || idx}
