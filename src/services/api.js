@@ -42,7 +42,9 @@ export const KNOWN_CATEGORY_MAP = {
   'filme': '56b338d8-963f-4d4c-a4d8-49ad1b399397',
   'filme-2': '56b338d8-963f-4d4c-a4d8-49ad1b399397',
   'dong': 'bcbdf77a-b82d-4d9a-8324-7e1563704f54',
-  'desen': '6af0da05-90f9-4a17-b697-97223198656d'
+  'desen': '6af0da05-90f9-4a17-b697-97223198656d',
+  'recentes': 'recentes',
+  'atualizados': 'atualizados'
 };
 
 // Helper for GraphQL queries via our backend proxy
@@ -119,6 +121,14 @@ export async function getCatalogAnimes({
   if (effectiveQuery) {
     const searchRes = await searchAnimesWithMeta(effectiveQuery, limit, offset);
     return searchRes;
+  }
+
+  // If user requested recent updates / releases
+  if (category === 'recentes' || category === 'atualizados') {
+    const recent = await getLatestReleases(limit, offset);
+    if (recent && recent.items && recent.items.length > 0) {
+      return recent;
+    }
   }
 
   // If a specific genre or audio/format category is selected
@@ -313,7 +323,61 @@ export async function submitAnimeRating(cid, stars) {
   }
 }
 
-// 11. Local Storage Management (Favorites & History)
+// 11. Fetch Latest Released Episodes (raw newly released episodes)
+export async function getLatestEpisodes() {
+  const query = `
+    query LatestVideos {
+      LatestVideos
+    }
+  `;
+  const res = await fetchGraphQL(query);
+  if (res && res.LatestVideos) {
+    const key = Object.keys(res.LatestVideos)[0];
+    const rawList = res.LatestVideos[key] || [];
+    return rawList.map(item => {
+      const match = (item.video_thumbnail_b || '').match(/_c(\d+)\./);
+      const upstreamCid = match ? Number(match[1]) : null;
+      return {
+        id: item.id,
+        upstreamId: Number(item.id),
+        upstreamCid,
+        animeName: item.category_name,
+        animeNameEn: item.category_name_en,
+        episodeTitle: item.video_title,
+        episodeLabel: item.video_ep,
+        seasonName: item.temp_name,
+        audioType: item.audio_type || (item.video_ep?.includes('DUB') ? 'DUB' : 'LEG'),
+        thumbnail: item.video_thumbnail_b,
+        type: item.type
+      };
+    });
+  }
+  return [];
+}
+
+// 12. Fetch Latest Updated Animes (animes with new episodes released)
+export async function getLatestReleases(limit = 24, offset = 0) {
+  const query = `
+    ${ANIME_FIELDS}
+    query LatestReleases($input: LatestReleasesInput) {
+      latestReleases(input: $input) {
+        total
+        offset
+        limit
+        items {
+          ...AnimeFields
+        }
+      }
+    }
+  `;
+  const res = await fetchGraphQL(query, { input: { limit, offset } });
+  if (res && res.latestReleases && res.latestReleases.items) {
+    return res.latestReleases;
+  }
+  return { total: 0, items: [] };
+}
+
+// 13. Local Storage Management (Favorites & History)
 const FAVORITES_KEY = 'aether_anime_my_list';
 const HISTORY_KEY = 'aether_anime_watch_history';
 const USER_KEY = 'aether_anime_user';

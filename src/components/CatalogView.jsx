@@ -121,7 +121,13 @@ export default function CatalogView({
       });
   }, [animes, selectedAudio, selectedYear, sortBy]);
 
-  const categoriesList = categories.length > 0 ? categories : FALLBACK_CATEGORIES;
+  const categoriesList = useMemo(() => {
+    const list = categories.length > 0 ? categories : FALLBACK_CATEGORIES;
+    return [
+      { id: 'recentes', name: '⚡ Recém-Atualizados', slug: 'recentes', animeCount: 84 },
+      ...list
+    ];
+  }, [categories]);
 
   const hasMore = animes.length < totalCount;
 

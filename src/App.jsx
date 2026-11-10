@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import HeroBanner from './components/HeroBanner';
 import AnimeRow from './components/AnimeRow';
+import LatestEpisodesRow from './components/LatestEpisodesRow';
 import CatalogView from './components/CatalogView';
 import AnimeDetailModal from './components/AnimeDetailModal';
 import VideoPlayerView from './components/VideoPlayerView';
@@ -15,6 +16,8 @@ import {
   getNavCategories, 
   getAnimesByCategory, 
   searchAnimes,
+  getLatestEpisodes,
+  getLatestReleases,
   getMyList, 
   toggleMyList, 
   isAnimeInMyList,
@@ -24,7 +27,7 @@ import {
   getAnimeCatalogDetail
 } from './services/api';
 
-import { Flame, Sparkles, Film, Tv, PlayCircle, Star, Compass } from 'lucide-react';
+import { Flame, Sparkles, Film, Tv, PlayCircle, Star, Compass, Zap } from 'lucide-react';
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState('home'); // home | catalog | dublados | donghuas | quiz | my-list
@@ -32,6 +35,8 @@ export default function App() {
 
   // App Data
   const [highlights, setHighlights] = useState([]);
+  const [latestEpisodes, setLatestEpisodes] = useState([]);
+  const [latestReleases, setLatestReleases] = useState([]);
   const [actionAnimes, setActionAnimes] = useState([]);
   const [shounenAnimes, setShounenAnimes] = useState([]);
   const [dubbedAnimes, setDubbedAnimes] = useState([]);
@@ -54,13 +59,15 @@ export default function App() {
     async function loadInitialData() {
       setLoading(true);
       try {
-        const [hData, cats, act, shou, dub, dong] = await Promise.all([
+        const [hData, cats, act, shou, dub, dong, latestEps, recentRel] = await Promise.all([
           getHomeHighlights(),
           getNavCategories(),
           getAnimesByCategory('acao', 18),
           getAnimesByCategory('shounen', 18),
           getAnimesByCategory('dub', 18),
           getAnimesByCategory('dong', 18),
+          getLatestEpisodes(),
+          getLatestReleases(18),
         ]);
 
         if (hData && hData.length > 0) {
@@ -71,6 +78,8 @@ export default function App() {
         }
 
         if (cats) setCategories(cats);
+        if (latestEps && latestEps.length > 0) setLatestEpisodes(latestEps);
+        if (recentRel && recentRel.items && recentRel.items.length > 0) setLatestReleases(recentRel.items);
 
         // Populate shelves with fallback to popular searches if needed
         setActionAnimes(act?.items?.length > 0 ? act.items : await searchAnimes('Jujutsu', 12));
@@ -125,6 +134,62 @@ export default function App() {
   const handlePlayEpisode = (anime, episode, allEpisodes) => {
     setSelectedAnime(null);
     setActivePlayer({ anime, episode, allEpisodes });
+  };
+
+  // Play latest released episode directly
+  const handlePlayLatestEpisode = async (latestEp) => {
+    let cid = latestEp.upstreamCid;
+    if (!cid) {
+      const found = await searchAnimes(latestEp.animeName, 1);
+      if (found && found[0]?.upstreamCid) {
+        cid = found[0].upstreamCid;
+      }
+    }
+
+    if (cid) {
+      const detail = await getAnimeCatalogDetail(cid);
+      const episodes = detail?.episodes || [];
+      const targetEp = episodes.find(e => String(e.upstreamId) === String(latestEp.id)) || episodes.slice(-1)[0] || {
+        upstreamId: Number(latestEp.id),
+        title: latestEp.episodeTitle || `${latestEp.animeName} - Episódio`,
+        episodeNumber: Number(latestEp.episodeLabel?.replace(/\D/g, '') || 1)
+      };
+
+      setActivePlayer({
+        anime: detail?.anime || {
+          upstreamCid: cid,
+          name: latestEp.animeName,
+          posterUrl: latestEp.thumbnail
+        },
+        episode: targetEp,
+        allEpisodes: episodes.length > 0 ? episodes : [targetEp]
+      });
+    }
+  };
+
+  // Open anime detail modal from latest episode info
+  const handleSelectLatestEpisodeAnime = async (latestEp) => {
+    let cid = latestEp.upstreamCid;
+    if (!cid) {
+      const found = await searchAnimes(latestEp.animeName, 1);
+      if (found && found[0]) {
+        setSelectedAnime(found[0]);
+        return;
+      }
+    }
+
+    if (cid) {
+      const detail = await getAnimeCatalogDetail(cid);
+      if (detail?.anime) {
+        setSelectedAnime(detail.anime);
+      } else {
+        setSelectedAnime({
+          upstreamCid: cid,
+          name: latestEp.animeName,
+          posterUrl: latestEp.thumbnail
+        });
+      }
+    }
   };
 
   // Resume playback from watch history
@@ -207,6 +272,30 @@ export default function App() {
                 ))}
               </div>
             </div>
+
+            {/* SEÇÃO PRINCIPAL: Últimos Episódios Lançados (Episódios Novos) */}
+            {latestEpisodes.length > 0 && (
+              <LatestEpisodesRow
+                episodes={latestEpisodes}
+                onPlayEpisode={handlePlayLatestEpisode}
+                onSelectAnime={handleSelectLatestEpisodeAnime}
+              />
+            )}
+
+            {/* SEÇÃO: Animes com Lançamentos & Recém-Atualizados */}
+            {latestReleases.length > 0 && (
+              <AnimeRow
+                title="Lançamentos & Recém-Atualizados"
+                subtitle="Animes com episódios novos acabados de sair nesta temporada"
+                icon={Zap}
+                animes={latestReleases}
+                onSelectAnime={(anime) => setSelectedAnime(anime)}
+                onPlayAnime={handlePlayAnime}
+                onToggleFavorite={handleToggleFavorite}
+                isFavorite={checkIsFavorite}
+                onViewAll={() => handleSelectCategory('recentes')}
+              />
+            )}
 
             {/* "Continuar Assistindo" shelf if user has history */}
             {watchHistory.length > 0 && (
