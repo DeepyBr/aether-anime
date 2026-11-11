@@ -31,18 +31,16 @@ import {
 import { Flame, Sparkles, Film, Tv, PlayCircle, Star, Compass, Zap, Calendar } from 'lucide-react';
 
 export default function App() {
-  const [currentTab, setCurrentTab] = useState('home'); // home | catalog | dublados | donghuas | quiz | my-list
+  const [currentTab, setCurrentTab] = useState('home'); // home | catalog | temporada-2026 | dublados | quiz | my-list
   const [catalogCategory, setCatalogCategory] = useState(null);
 
   // App Data
   const [highlights, setHighlights] = useState([]);
   const [latestEpisodes, setLatestEpisodes] = useState([]);
-  const [latestReleases, setLatestReleases] = useState([]);
   const [thisYearAnimes, setThisYearAnimes] = useState([]);
   const [actionAnimes, setActionAnimes] = useState([]);
   const [shounenAnimes, setShounenAnimes] = useState([]);
   const [dubbedAnimes, setDubbedAnimes] = useState([]);
-  const [donghuas, setDonghuas] = useState([]);
   const [categories, setCategories] = useState([]);
 
   // User State (Unrestricted)
@@ -61,15 +59,13 @@ export default function App() {
     async function loadInitialData() {
       setLoading(true);
       try {
-        const [hData, cats, act, shou, dub, dong, latestEps, recentRel, yearAnimes] = await Promise.all([
+        const [hData, cats, act, shou, dub, latestEps, yearAnimes] = await Promise.all([
           getHomeHighlights(),
           getNavCategories(),
           getAnimesByCategory('acao', 18),
           getAnimesByCategory('shounen', 18),
           getAnimesByCategory('dub', 18),
-          getAnimesByCategory('dong', 18),
           getLatestEpisodes(),
-          getLatestReleases(18),
           getThisYearAnimes(24)
         ]);
 
@@ -82,14 +78,12 @@ export default function App() {
 
         if (cats) setCategories(cats);
         if (latestEps && latestEps.length > 0) setLatestEpisodes(latestEps);
-        if (recentRel && recentRel.items && recentRel.items.length > 0) setLatestReleases(recentRel.items);
         if (yearAnimes && yearAnimes.length > 0) setThisYearAnimes(yearAnimes);
 
-        // Populate shelves with fallback to popular searches if needed
+        // Populate shelves with clean Japanese anime hits
         setActionAnimes(act?.items?.length > 0 ? act.items : await searchAnimes('Jujutsu', 12));
         setShounenAnimes(shou?.items?.length > 0 ? shou.items : await searchAnimes('One Piece', 12));
         setDubbedAnimes(dub?.items?.length > 0 ? dub.items : await searchAnimes('Dragon Ball', 12));
-        setDonghuas(dong?.items?.length > 0 ? dong.items : await searchAnimes('Solo Leveling', 12));
       } catch (err) {
         console.error('Initialization error:', err);
       } finally {
@@ -234,8 +228,8 @@ export default function App() {
         setCurrentTab={(tab) => {
           setCurrentTab(tab);
           if (tab === 'catalog') setCatalogCategory('todos');
+          if (tab === 'temporada-2026') { setCatalogCategory('2026'); setCurrentTab('catalog'); }
           if (tab === 'dublados') { setCatalogCategory('dub'); setCurrentTab('catalog'); }
-          if (tab === 'donghuas') { setCatalogCategory('dong'); setCurrentTab('catalog'); }
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
         onSelectAnime={(anime) => setSelectedAnime(anime)}
@@ -296,21 +290,6 @@ export default function App() {
               />
             )}
 
-            {/* SEÇÃO: Animes com Lançamentos & Recém-Atualizados (Prioridade 2026) */}
-            {latestReleases.length > 0 && (
-              <AnimeRow
-                title="Lançamentos & Recém-Atualizados"
-                subtitle="Animes com episódios novos acabados de sair nesta temporada (priorizando 2026)"
-                icon={Zap}
-                animes={latestReleases}
-                onSelectAnime={(anime) => setSelectedAnime(anime)}
-                onPlayAnime={handlePlayAnime}
-                onToggleFavorite={handleToggleFavorite}
-                isFavorite={checkIsFavorite}
-                onViewAll={() => handleSelectCategory('recentes')}
-              />
-            )}
-
             {/* SEÇÃO DEDICADA: Lançamentos Deste Ano (2026) */}
             {thisYearAnimes.length > 0 && (
               <AnimeRow
@@ -328,7 +307,7 @@ export default function App() {
 
             {/* "Continuar Assistindo" shelf if user has history */}
             {watchHistory.length > 0 && (
-              <div className="mt-8">
+              <div className="mt-4">
                 <AnimeRow
                   title="Continuar Assistindo"
                   subtitle="Retome seus episódios em andamento"
@@ -354,22 +333,9 @@ export default function App() {
               </div>
             )}
 
-            {/* Shelf 1: Destaques & Ação */}
+            {/* Shelf: Shounen Clássicos & Modernos */}
             <AnimeRow
-              title="Destaques & Ação Cósmica"
-              subtitle="As batalhas mais épicas e lançamentos em alta"
-              icon={Flame}
-              animes={actionAnimes}
-              onSelectAnime={(anime) => setSelectedAnime(anime)}
-              onPlayAnime={handlePlayAnime}
-              onToggleFavorite={handleToggleFavorite}
-              isFavorite={checkIsFavorite}
-              onViewAll={() => handleSelectCategory('acao')}
-            />
-
-            {/* Shelf 2: Shounen Clássicos & Modernos */}
-            <AnimeRow
-              title="Mundo Shounen"
+              title="Mundo Shounen & Populares"
               subtitle="Jornadas inesquecíveis, superações e amizade"
               icon={Star}
               animes={shounenAnimes}
@@ -380,7 +346,7 @@ export default function App() {
               onViewAll={() => handleSelectCategory('shounen')}
             />
 
-            {/* Shelf 3: Dublados em Português */}
+            {/* Shelf: Dublados em Português */}
             <AnimeRow
               title="Animes Dublados (PT-BR)"
               subtitle="Assista com os melhores dubladores do Brasil"
@@ -393,17 +359,17 @@ export default function App() {
               onViewAll={() => handleSelectCategory('dub')}
             />
 
-            {/* Shelf 4: Donghuas & Animações Orientais */}
+            {/* Shelf: Destaques & Ação */}
             <AnimeRow
-              title="Donghuas (Animes Chineses)"
-              subtitle="Cultivação, poderes místicos e 3D de tirar o fôlego"
-              icon={Film}
-              animes={donghuas}
+              title="Destaques & Ação Cósmica"
+              subtitle="As batalhas mais épicas e lançamentos em alta"
+              icon={Flame}
+              animes={actionAnimes}
               onSelectAnime={(anime) => setSelectedAnime(anime)}
               onPlayAnime={handlePlayAnime}
               onToggleFavorite={handleToggleFavorite}
               isFavorite={checkIsFavorite}
-              onViewAll={() => handleSelectCategory('dong')}
+              onViewAll={() => handleSelectCategory('acao')}
             />
 
           </div>

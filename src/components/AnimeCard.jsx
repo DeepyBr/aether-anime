@@ -32,13 +32,12 @@ export default function AnimeCard({
         {/* Audio Mix Badge */}
         <div className="absolute top-2 left-2 flex items-center gap-1 z-10">
           {anime.audioMix && (
-            <span className="text-[9px] sm:text-[10px] font-mono font-bold px-1.5 sm:px-2 py-0.2 sm:py-0.5 rounded bg-cyber-pink/90 text-white shadow-neon-pink">
+            <span className="text-[9px] sm:text-[10px] font-mono font-bold px-1.5 sm:px-2 py-0.5 rounded bg-cyber-pink/90 text-white shadow-neon-pink">
               {anime.audioMix}
             </span>
           )}
           {anime.hasNewEpisode && (
-            <span className="text-[9px] sm:text-[10px] font-bold px-1.5 py-0.2 rounded bg-cyber-cyan text-cyber-bg shadow-neon-cyan flex items-center gap-0.5">
-              <Sparkles className="w-2 h-2 animate-spin" />
+            <span className="text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded bg-cyber-cyan text-cyber-bg shadow-neon-cyan flex items-center gap-1 tracking-wider font-mono">
               NOVO
             </span>
           )}

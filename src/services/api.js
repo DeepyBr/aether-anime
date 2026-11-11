@@ -1,5 +1,27 @@
 // Aether Anime API Service
+import chineseCidsList from './chineseCids.json';
+
 const GRAPHQL_ENDPOINT = '/api/graphql';
+
+// 281 pre-indexed Chinese anime / Donghua CIDs to filter out
+const CHINESE_CIDS = new Set(chineseCidsList);
+
+export function isChineseOrCartoon(animeOrCid) {
+  if (!animeOrCid) return false;
+  const cid = typeof animeOrCid === 'object' ? animeOrCid.upstreamCid : Number(animeOrCid);
+  if (cid) {
+    if (CHINESE_CIDS.has(cid)) return true;
+    // 900000+ IDs are Otakulogia third-party ingest imports (cartoons / donghuas)
+    if (cid >= 900000) return true;
+  }
+  if (typeof animeOrCid === 'object') {
+    if (animeOrCid.type === 'dong' || animeOrCid.type === 'desen') return true;
+    if (animeOrCid.slug === 'dong' || animeOrCid.slug === 'anime-chines' || animeOrCid.slug === 'desen') return true;
+    const name = (animeOrCid.name || animeOrCid.animeName || '').toLowerCase();
+    if (name.includes('donghua') || name.includes('anime chinês') || name.includes('desenho')) return true;
+  }
+  return false;
+}
 
 const ANIME_FIELDS = `
   fragment AnimeFields on AnimeEntity {
@@ -17,7 +39,7 @@ const ANIME_FIELDS = `
   }
 `;
 
-// Known category UUID mapping from Otakulogia
+// Known category UUID mapping from Otakulogia (Cleaned - 100% Japanese Anime)
 export const KNOWN_CATEGORY_MAP = {
   'todos': '4e0c4509-cbb0-486e-a52d-dcf3fe56e479',
   'anime': '4e0c4509-cbb0-486e-a52d-dcf3fe56e479',
@@ -41,8 +63,6 @@ export const KNOWN_CATEGORY_MAP = {
   'dublado': '88443a9f-0639-4e53-b29d-6bd928564283',
   'filme': '56b338d8-963f-4d4c-a4d8-49ad1b399397',
   'filme-2': '56b338d8-963f-4d4c-a4d8-49ad1b399397',
-  'dong': 'bcbdf77a-b82d-4d9a-8324-7e1563704f54',
-  'desen': '6af0da05-90f9-4a17-b697-97223198656d',
   'recentes': 'recentes',
   'atualizados': 'atualizados',
   '2026': '2026',
@@ -104,9 +124,11 @@ export async function getNavCategories() {
   `;
   const res = await fetchGraphQL(query);
   if (res && res.navCategories && res.navCategories.length > 0) {
-    return res.navCategories.map(item => item.category);
+    return res.navCategories
+      .map(item => item.category)
+      .filter(cat => cat && !isChineseOrCartoon(cat) && cat.slug !== 'dong' && cat.slug !== 'desen' && cat.slug !== 'anime-chines');
   }
-  return FALLBACK_CATEGORIES;
+  return FALLBACK_CATEGORIES.filter(cat => cat.slug !== 'dong');
 }
 
 // 3. Unified Catalog Fetcher with Pagination (access to all 4,352+ animes)
@@ -174,7 +196,7 @@ export async function getCatalogAnimes({
   return await searchAnimesWithMeta('', limit, offset);
 }
 
-// 4. Search with metadata (total, offset, limit, items)
+// 4. Search with metadata (total, offset, limit, items) - 100% Japanese Anime
 export async function searchAnimesWithMeta(searchQuery = '', limit = 30, offset = 0) {
   const query = `
     ${ANIME_FIELDS}
@@ -190,10 +212,16 @@ export async function searchAnimesWithMeta(searchQuery = '', limit = 30, offset 
     }
   `;
   const res = await fetchGraphQL(query, {
-    input: { query: searchQuery, limit, offset }
+    input: { query: searchQuery, limit: Math.min(limit * 2, 100), offset }
   });
   if (res && res.searchAnimes) {
-    return res.searchAnimes;
+    const clean = (res.searchAnimes.items || []).filter(a => !isChineseOrCartoon(a));
+    return {
+      total: res.searchAnimes.total,
+      offset: res.searchAnimes.offset,
+      limit,
+      items: clean.slice(0, limit)
+    };
   }
   return { total: FALLBACK_HIGHLIGHTS.length, offset: 0, limit, items: FALLBACK_HIGHLIGHTS };
 }
@@ -206,6 +234,10 @@ export async function searchAnimes(searchQuery, limit = 24, offset = 0) {
 
 // 6. Fetch Animes by Category Slug/ID (for shelves)
 export async function getAnimesByCategory(categoryIdentifier, limit = 20, offset = 0) {
+  if (categoryIdentifier === 'dong' || categoryIdentifier === 'desen') {
+    return { total: 0, items: [] };
+  }
+
   const categoryId = KNOWN_CATEGORY_MAP[categoryIdentifier] || categoryIdentifier;
 
   if (categoryId && categoryId.includes('-')) {
@@ -223,10 +255,16 @@ export async function getAnimesByCategory(categoryIdentifier, limit = 20, offset
       }
     `;
     const res = await fetchGraphQL(query, {
-      input: { categoryId, limit, offset }
+      input: { categoryId, limit: Math.min(limit * 2, 100), offset }
     });
     if (res && res.animesByCategory && res.animesByCategory.items && res.animesByCategory.items.length > 0) {
-      return res.animesByCategory;
+      const clean = res.animesByCategory.items.filter(a => !isChineseOrCartoon(a));
+      return {
+        total: res.animesByCategory.total,
+        offset: res.animesByCategory.offset,
+        limit,
+        items: clean.slice(0, limit)
+      };
     }
   }
 
@@ -337,64 +375,89 @@ export async function submitAnimeRating(cid, stars) {
   }
 }
 
-// 11. Fetch Latest Released Episodes (with preference for current year 2026 updates)
+// 11. Fetch Latest Released Episodes (100% Japanese Anime, prioritizing 2026)
 export async function getLatestEpisodes() {
   const query = `
     query LatestVideosAndReleases {
       LatestVideos
       latestReleases(input: { limit: 84 }) {
         items {
-          upstreamCid
-          year
+          ...AnimeFields
         }
       }
     }
   `;
   const res = await fetchGraphQL(query);
+  const japaneseReleases = (res?.latestReleases?.items || [])
+    .filter(a => !isChineseOrCartoon(a));
+
   if (res && res.LatestVideos) {
     const key = Object.keys(res.LatestVideos)[0];
     const rawList = res.LatestVideos[key] || [];
 
     const cidYearMap = {};
-    if (res.latestReleases?.items) {
-      res.latestReleases.items.forEach(r => {
-        cidYearMap[r.upstreamCid] = r.year;
+    japaneseReleases.forEach(r => {
+      cidYearMap[r.upstreamCid] = r.year;
+    });
+
+    const validEps = rawList
+      .filter(item => {
+        const m = (item.video_thumbnail_b || '').match(/_c(\d+)\./);
+        const cid = m ? Number(m[1]) : null;
+        if (cid && isChineseOrCartoon(cid)) return false;
+        if (isChineseOrCartoon(item)) return false;
+        return true;
+      })
+      .map(item => {
+        const match = (item.video_thumbnail_b || '').match(/_c(\d+)\./);
+        const upstreamCid = match ? Number(match[1]) : null;
+        const year = upstreamCid && cidYearMap[upstreamCid] ? cidYearMap[upstreamCid] : null;
+
+        return {
+          id: item.id,
+          upstreamId: Number(item.id),
+          upstreamCid,
+          year,
+          isThisYear: year === 2026,
+          animeName: item.category_name,
+          animeNameEn: item.category_name_en,
+          episodeTitle: item.video_title,
+          episodeLabel: item.video_ep,
+          seasonName: item.temp_name,
+          audioType: item.audio_type || (item.video_ep?.includes('DUB') ? 'DUB' : 'LEG'),
+          thumbnail: item.video_thumbnail_b,
+          type: item.type
+        };
+      });
+
+    if (validEps.length > 0) {
+      return validEps.sort((a, b) => {
+        if (a.isThisYear && !b.isThisYear) return -1;
+        if (!a.isThisYear && b.isThisYear) return 1;
+        return 0;
       });
     }
-
-    const formatted = rawList.map(item => {
-      const match = (item.video_thumbnail_b || '').match(/_c(\d+)\./);
-      const upstreamCid = match ? Number(match[1]) : null;
-      const year = upstreamCid && cidYearMap[upstreamCid] ? cidYearMap[upstreamCid] : null;
-
-      return {
-        id: item.id,
-        upstreamId: Number(item.id),
-        upstreamCid,
-        year,
-        isThisYear: year === 2026,
-        animeName: item.category_name,
-        animeNameEn: item.category_name_en,
-        episodeTitle: item.video_title,
-        episodeLabel: item.video_ep,
-        seasonName: item.temp_name,
-        audioType: item.audio_type || (item.video_ep?.includes('DUB') ? 'DUB' : 'LEG'),
-        thumbnail: item.video_thumbnail_b,
-        type: item.type
-      };
-    });
-
-    // Sort with preference for episodes from this year (2026) first
-    return formatted.sort((a, b) => {
-      if (a.isThisYear && !b.isThisYear) return -1;
-      if (!a.isThisYear && b.isThisYear) return 1;
-      return 0;
-    });
   }
-  return [];
+
+  // Pure Japanese Anime recent releases fallback
+  return japaneseReleases.slice(0, 24).map((anime, idx) => ({
+    id: String(anime.upstreamCid * 1000 + 1),
+    upstreamId: anime.upstreamCid * 1000 + 1,
+    upstreamCid: anime.upstreamCid,
+    year: anime.year,
+    isThisYear: anime.year === 2026,
+    animeName: anime.name,
+    animeNameEn: anime.nameEn,
+    episodeTitle: 'Novo Episódio',
+    episodeLabel: 'EP NOVO',
+    seasonName: 'Temporada ' + (anime.year || 2026),
+    audioType: anime.audioMix || 'DUB',
+    thumbnail: anime.posterUrl,
+    type: 'anime'
+  }));
 }
 
-// 12. Fetch Latest Updated Animes (with preference for current year 2026)
+// 12. Fetch Latest Updated Animes (100% Japanese Anime, 2026 preference)
 export async function getLatestReleases(limit = 24, offset = 0) {
   const query = `
     ${ANIME_FIELDS}
@@ -409,10 +472,13 @@ export async function getLatestReleases(limit = 24, offset = 0) {
       }
     }
   `;
-  const res = await fetchGraphQL(query, { input: { limit: Math.max(limit, 84), offset } });
+  const res = await fetchGraphQL(query, { input: { limit: 84, offset: 0 } });
   if (res && res.latestReleases && res.latestReleases.items) {
-    // Sort so 2026 (this year) updated animes are given priority at the beginning
-    const sorted = [...res.latestReleases.items].sort((a, b) => {
+    // Filter out all Chinese animes & cartoons
+    const pureJapanese = res.latestReleases.items.filter(a => !isChineseOrCartoon(a));
+
+    // Sort: 2026 (this year) first, then descending by year
+    const sorted = pureJapanese.sort((a, b) => {
       const aIs2026 = a.year === 2026 ? 1 : 0;
       const bIs2026 = b.year === 2026 ? 1 : 0;
       if (aIs2026 !== bIs2026) return bIs2026 - aIs2026;
@@ -420,7 +486,7 @@ export async function getLatestReleases(limit = 24, offset = 0) {
     });
 
     return {
-      total: res.latestReleases.total,
+      total: sorted.length,
       offset,
       limit,
       items: sorted.slice(offset, offset + limit)
@@ -429,10 +495,10 @@ export async function getLatestReleases(limit = 24, offset = 0) {
   return { total: 0, items: [] };
 }
 
-// 13. Fetch Updated Animes Specifically from Current Year (2026)
+// 13. Fetch Updated Animes Specifically from Current Year (2026) - 100% Japanese
 export async function getThisYearAnimes(limit = 24) {
   const data = await getLatestReleases(84, 0);
-  const thisYearItems = (data?.items || []).filter(a => a.year === 2026);
+  const thisYearItems = (data?.items || []).filter(a => a.year === 2026 && !isChineseOrCartoon(a));
   return thisYearItems.slice(0, limit);
 }
 
@@ -568,7 +634,6 @@ export const FALLBACK_CATEGORIES = [
   { id: '88443a9f-0639-4e53-b29d-6bd928564283', name: 'Dublados', slug: 'dub', animeCount: 493 },
   { id: '6a70c2f3-bbad-4895-a1a5-166d26aecbca', name: 'Mistério', slug: 'misterio', animeCount: 334 },
   { id: '56b338d8-963f-4d4c-a4d8-49ad1b399397', name: 'Filmes', slug: 'filme-2', animeCount: 315 },
-  { id: 'bcbdf77a-b82d-4d9a-8324-7e1563704f54', name: 'Donghuas', slug: 'dong', animeCount: 281 },
   { id: '3bdcc72f-1d43-4db1-9eec-e019249d2d96', name: 'Ecchi', slug: 'ecchi', animeCount: 292 },
   { id: 'ab8762c1-1da4-4f4f-a7dc-6b92cd69f3c6', name: 'Mecha', slug: 'mecha', animeCount: 219 },
   { id: '0b305961-feef-4f44-bc83-0e4620bfe725', name: 'Música', slug: 'musica', animeCount: 155 },

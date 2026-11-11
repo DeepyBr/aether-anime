@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Heart, User, Play, Flame, Film, Tv, HelpCircle, CheckCircle, X } from 'lucide-react';
+import { Search, Heart, User, Play, Flame, Calendar, Tv, HelpCircle, CheckCircle, X } from 'lucide-react';
 import { searchAnimes } from '../services/api';
 
 export default function Navbar({ 
@@ -58,8 +58,8 @@ export default function Navbar({
   const navItems = [
     { id: 'home', label: 'Início', icon: Play },
     { id: 'catalog', label: 'Catálogo', icon: Tv },
+    { id: 'temporada-2026', label: '2026', icon: Calendar },
     { id: 'dublados', label: 'Dublados', icon: Flame },
-    { id: 'donghuas', label: 'Donghuas', icon: Film },
     { id: 'quiz', label: 'Quiz Otaku', icon: HelpCircle },
     { id: 'my-list', label: 'Minha Lista', icon: Heart, badge: myListCount },
   ];
@@ -67,8 +67,8 @@ export default function Navbar({
   const bottomNavItems = [
     { id: 'home', label: 'Início', icon: Play },
     { id: 'catalog', label: 'Catálogo', icon: Tv },
+    { id: 'temporada-2026', label: '2026', icon: Calendar },
     { id: 'dublados', label: 'Dublados', icon: Flame },
-    { id: 'quiz', label: 'Quiz', icon: HelpCircle },
     { id: 'my-list', label: 'Lista', icon: Heart, badge: myListCount },
   ];
 

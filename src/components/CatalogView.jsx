@@ -167,7 +167,7 @@ export default function CatalogView({
               Explorador do Multiverso Anime
             </h1>
             <p className="text-sm text-slate-300 mt-2 max-w-xl">
-              Navegue por todo o catálogo com mais de 4.300 animes, dublados, donghuas e filmes em alta definição.
+              Navegue por todo o catálogo com mais de 4.000 animes japoneses, dublados, lançamentos de 2026 e filmes em alta definição.
             </p>
           </div>
 

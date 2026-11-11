@@ -19,7 +19,7 @@ export default function Footer({ onSelectCategory }) {
             </div>
 
             <p className="text-xs sm:text-sm text-slate-400 max-w-md leading-relaxed">
-              O ecossistema definitivo para amantes de animes, dublados, donghuas e cultura pop oriental. 
+              O ecossistema definitivo para amantes de animes, dublados, lançamentos de 2026 e cultura pop japonesa. 
               Experiência 100% livre, sem paywall, sem restrições e inspirada na estética Synthwave Cyberpunk.
             </p>
 
