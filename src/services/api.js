@@ -44,7 +44,9 @@ export const KNOWN_CATEGORY_MAP = {
   'dong': 'bcbdf77a-b82d-4d9a-8324-7e1563704f54',
   'desen': '6af0da05-90f9-4a17-b697-97223198656d',
   'recentes': 'recentes',
-  'atualizados': 'atualizados'
+  'atualizados': 'atualizados',
+  '2026': '2026',
+  'deste-ano': 'deste-ano'
 };
 
 // Helper for GraphQL queries via our backend proxy
@@ -121,6 +123,18 @@ export async function getCatalogAnimes({
   if (effectiveQuery) {
     const searchRes = await searchAnimesWithMeta(effectiveQuery, limit, offset);
     return searchRes;
+  }
+
+  // If user requested animes from this year (2026)
+  if (category === '2026' || category === 'deste-ano') {
+    const recent = await getLatestReleases(84, 0);
+    const items2026 = (recent?.items || []).filter(a => a.year === 2026);
+    return {
+      total: items2026.length,
+      offset,
+      limit,
+      items: items2026.slice(offset, offset + limit)
+    };
   }
 
   // If user requested recent updates / releases
@@ -323,24 +337,42 @@ export async function submitAnimeRating(cid, stars) {
   }
 }
 
-// 11. Fetch Latest Released Episodes (raw newly released episodes)
+// 11. Fetch Latest Released Episodes (with preference for current year 2026 updates)
 export async function getLatestEpisodes() {
   const query = `
-    query LatestVideos {
+    query LatestVideosAndReleases {
       LatestVideos
+      latestReleases(input: { limit: 84 }) {
+        items {
+          upstreamCid
+          year
+        }
+      }
     }
   `;
   const res = await fetchGraphQL(query);
   if (res && res.LatestVideos) {
     const key = Object.keys(res.LatestVideos)[0];
     const rawList = res.LatestVideos[key] || [];
-    return rawList.map(item => {
+
+    const cidYearMap = {};
+    if (res.latestReleases?.items) {
+      res.latestReleases.items.forEach(r => {
+        cidYearMap[r.upstreamCid] = r.year;
+      });
+    }
+
+    const formatted = rawList.map(item => {
       const match = (item.video_thumbnail_b || '').match(/_c(\d+)\./);
       const upstreamCid = match ? Number(match[1]) : null;
+      const year = upstreamCid && cidYearMap[upstreamCid] ? cidYearMap[upstreamCid] : null;
+
       return {
         id: item.id,
         upstreamId: Number(item.id),
         upstreamCid,
+        year,
+        isThisYear: year === 2026,
         animeName: item.category_name,
         animeNameEn: item.category_name_en,
         episodeTitle: item.video_title,
@@ -351,11 +383,18 @@ export async function getLatestEpisodes() {
         type: item.type
       };
     });
+
+    // Sort with preference for episodes from this year (2026) first
+    return formatted.sort((a, b) => {
+      if (a.isThisYear && !b.isThisYear) return -1;
+      if (!a.isThisYear && b.isThisYear) return 1;
+      return 0;
+    });
   }
   return [];
 }
 
-// 12. Fetch Latest Updated Animes (animes with new episodes released)
+// 12. Fetch Latest Updated Animes (with preference for current year 2026)
 export async function getLatestReleases(limit = 24, offset = 0) {
   const query = `
     ${ANIME_FIELDS}
@@ -370,14 +409,34 @@ export async function getLatestReleases(limit = 24, offset = 0) {
       }
     }
   `;
-  const res = await fetchGraphQL(query, { input: { limit, offset } });
+  const res = await fetchGraphQL(query, { input: { limit: Math.max(limit, 84), offset } });
   if (res && res.latestReleases && res.latestReleases.items) {
-    return res.latestReleases;
+    // Sort so 2026 (this year) updated animes are given priority at the beginning
+    const sorted = [...res.latestReleases.items].sort((a, b) => {
+      const aIs2026 = a.year === 2026 ? 1 : 0;
+      const bIs2026 = b.year === 2026 ? 1 : 0;
+      if (aIs2026 !== bIs2026) return bIs2026 - aIs2026;
+      return (b.year || 0) - (a.year || 0);
+    });
+
+    return {
+      total: res.latestReleases.total,
+      offset,
+      limit,
+      items: sorted.slice(offset, offset + limit)
+    };
   }
   return { total: 0, items: [] };
 }
 
-// 13. Local Storage Management (Favorites & History)
+// 13. Fetch Updated Animes Specifically from Current Year (2026)
+export async function getThisYearAnimes(limit = 24) {
+  const data = await getLatestReleases(84, 0);
+  const thisYearItems = (data?.items || []).filter(a => a.year === 2026);
+  return thisYearItems.slice(0, limit);
+}
+
+// 14. Local Storage Management (Favorites & History)
 const FAVORITES_KEY = 'aether_anime_my_list';
 const HISTORY_KEY = 'aether_anime_watch_history';
 const USER_KEY = 'aether_anime_user';

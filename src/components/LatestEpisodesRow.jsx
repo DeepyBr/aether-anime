@@ -98,6 +98,12 @@ export default function LatestEpisodesRow({
                     NOVO EP
                   </span>
 
+                  {(ep.isThisYear || ep.year === 2026) && (
+                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500 text-black shadow-sm font-bold">
+                      2026
+                    </span>
+                  )}
+
                   <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${
                     isDub 
                       ? 'bg-cyber-cyan/90 text-cyber-bg font-bold shadow-neon-cyan' 

@@ -101,6 +101,7 @@ export default function CatalogView({
         // Year filter
         if (selectedYear !== 'all') {
           const yr = anime.year || 0;
+          if (selectedYear === '2026' && yr !== 2026) return false;
           if (selectedYear === '2025' && yr !== 2025) return false;
           if (selectedYear === '2024' && yr !== 2024) return false;
           if (selectedYear === '2023' && yr !== 2023) return false;
@@ -112,18 +113,31 @@ export default function CatalogView({
         return true;
       })
       .sort((a, b) => {
-        if (sortBy === 'year') {
+        if (sortBy === 'this-year') {
+          const a26 = a.year === 2026 ? 1 : 0;
+          const b26 = b.year === 2026 ? 1 : 0;
+          if (a26 !== b26) return b26 - a26;
+          return (b.year || 0) - (a.year || 0);
+        } else if (sortBy === 'year') {
           return (b.year || 0) - (a.year || 0);
         } else if (sortBy === 'name') {
           return (a.name || '').localeCompare(b.name || '');
         }
+        
+        // Em atualizados/recentes, prioriza ano atual (2026)
+        if (selectedCategory === 'recentes' || selectedCategory === '2026' || selectedCategory === 'deste-ano') {
+          const a26 = a.year === 2026 ? 1 : 0;
+          const b26 = b.year === 2026 ? 1 : 0;
+          if (a26 !== b26) return b26 - a26;
+        }
         return 0;
       });
-  }, [animes, selectedAudio, selectedYear, sortBy]);
+  }, [animes, selectedAudio, selectedYear, sortBy, selectedCategory]);
 
   const categoriesList = useMemo(() => {
     const list = categories.length > 0 ? categories : FALLBACK_CATEGORIES;
     return [
+      { id: '2026', name: '📅 Deste Ano (2026)', slug: '2026', animeCount: 48 },
       { id: 'recentes', name: '⚡ Recém-Atualizados', slug: 'recentes', animeCount: 84 },
       ...list
     ];
@@ -275,9 +289,10 @@ export default function CatalogView({
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(e.target.value)}
-              className="bg-cyber-bg border border-cyber-border rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyber-cyan cursor-pointer"
+              className="bg-cyber-bg border border-cyber-border rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyber-cyan cursor-pointer font-medium"
             >
               <option value="all">Todos os Anos</option>
+              <option value="2026">⭐ 2026 (Deste Ano)</option>
               <option value="2025">2025</option>
               <option value="2024">2024</option>
               <option value="2023">2023</option>
@@ -295,10 +310,11 @@ export default function CatalogView({
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="bg-cyber-bg border border-cyber-border rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyber-cyan cursor-pointer"
+            className="bg-cyber-bg border border-cyber-border rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyber-cyan cursor-pointer font-medium"
           >
             <option value="popular">Mais Populares</option>
-            <option value="year">Mais Recentes</option>
+            <option value="this-year">📅 Deste Ano (2026) Primeiro</option>
+            <option value="year">Mais Recentes (Ano)</option>
             <option value="name">Alfabético (A - Z)</option>
           </select>
 

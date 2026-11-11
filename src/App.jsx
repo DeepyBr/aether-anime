@@ -18,6 +18,7 @@ import {
   searchAnimes,
   getLatestEpisodes,
   getLatestReleases,
+  getThisYearAnimes,
   getMyList, 
   toggleMyList, 
   isAnimeInMyList,
@@ -27,7 +28,7 @@ import {
   getAnimeCatalogDetail
 } from './services/api';
 
-import { Flame, Sparkles, Film, Tv, PlayCircle, Star, Compass, Zap } from 'lucide-react';
+import { Flame, Sparkles, Film, Tv, PlayCircle, Star, Compass, Zap, Calendar } from 'lucide-react';
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState('home'); // home | catalog | dublados | donghuas | quiz | my-list
@@ -37,6 +38,7 @@ export default function App() {
   const [highlights, setHighlights] = useState([]);
   const [latestEpisodes, setLatestEpisodes] = useState([]);
   const [latestReleases, setLatestReleases] = useState([]);
+  const [thisYearAnimes, setThisYearAnimes] = useState([]);
   const [actionAnimes, setActionAnimes] = useState([]);
   const [shounenAnimes, setShounenAnimes] = useState([]);
   const [dubbedAnimes, setDubbedAnimes] = useState([]);
@@ -59,7 +61,7 @@ export default function App() {
     async function loadInitialData() {
       setLoading(true);
       try {
-        const [hData, cats, act, shou, dub, dong, latestEps, recentRel] = await Promise.all([
+        const [hData, cats, act, shou, dub, dong, latestEps, recentRel, yearAnimes] = await Promise.all([
           getHomeHighlights(),
           getNavCategories(),
           getAnimesByCategory('acao', 18),
@@ -68,6 +70,7 @@ export default function App() {
           getAnimesByCategory('dong', 18),
           getLatestEpisodes(),
           getLatestReleases(18),
+          getThisYearAnimes(24)
         ]);
 
         if (hData && hData.length > 0) {
@@ -80,6 +83,7 @@ export default function App() {
         if (cats) setCategories(cats);
         if (latestEps && latestEps.length > 0) setLatestEpisodes(latestEps);
         if (recentRel && recentRel.items && recentRel.items.length > 0) setLatestReleases(recentRel.items);
+        if (yearAnimes && yearAnimes.length > 0) setThisYearAnimes(yearAnimes);
 
         // Populate shelves with fallback to popular searches if needed
         setActionAnimes(act?.items?.length > 0 ? act.items : await searchAnimes('Jujutsu', 12));
@@ -261,6 +265,16 @@ export default function App() {
                 <span className="text-xs font-mono font-bold text-cyber-cyan uppercase tracking-wider shrink-0 flex items-center gap-1.5 pl-2">
                   <Compass className="w-3.5 h-3.5" /> Gêneros:
                 </span>
+                
+                {/* Destaque para Lançamentos 2026 */}
+                <button
+                  onClick={() => handleSelectCategory('2026')}
+                  className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-cyber-cyan/25 to-cyber-pink/25 border border-cyber-cyan text-xs font-bold whitespace-nowrap text-white shadow-neon-cyan hover:scale-105 transition cursor-pointer flex items-center gap-1.5 shrink-0"
+                >
+                  <Calendar className="w-3.5 h-3.5 text-cyber-cyan" />
+                  Temporada 2026
+                </button>
+
                 {categories.slice(0, 10).map((cat) => (
                   <button
                     key={cat.slug}
@@ -282,11 +296,11 @@ export default function App() {
               />
             )}
 
-            {/* SEÇÃO: Animes com Lançamentos & Recém-Atualizados */}
+            {/* SEÇÃO: Animes com Lançamentos & Recém-Atualizados (Prioridade 2026) */}
             {latestReleases.length > 0 && (
               <AnimeRow
                 title="Lançamentos & Recém-Atualizados"
-                subtitle="Animes com episódios novos acabados de sair nesta temporada"
+                subtitle="Animes com episódios novos acabados de sair nesta temporada (priorizando 2026)"
                 icon={Zap}
                 animes={latestReleases}
                 onSelectAnime={(anime) => setSelectedAnime(anime)}
@@ -294,6 +308,21 @@ export default function App() {
                 onToggleFavorite={handleToggleFavorite}
                 isFavorite={checkIsFavorite}
                 onViewAll={() => handleSelectCategory('recentes')}
+              />
+            )}
+
+            {/* SEÇÃO DEDICADA: Lançamentos Deste Ano (2026) */}
+            {thisYearAnimes.length > 0 && (
+              <AnimeRow
+                title="Lançamentos Deste Ano (2026)"
+                subtitle="Novas séries e temporadas estreadas no ano de 2026"
+                icon={Calendar}
+                animes={thisYearAnimes}
+                onSelectAnime={(anime) => setSelectedAnime(anime)}
+                onPlayAnime={handlePlayAnime}
+                onToggleFavorite={handleToggleFavorite}
+                isFavorite={checkIsFavorite}
+                onViewAll={() => handleSelectCategory('2026')}
               />
             )}
 
